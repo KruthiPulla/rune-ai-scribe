@@ -57,6 +57,25 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+        medical: {
+          primary: "hsl(var(--medical-primary))",
+          secondary: "hsl(var(--medical-secondary))",
+          accent: "hsl(var(--medical-accent))",
+        },
+      },
+      backgroundImage: {
+        'gradient-primary': 'var(--gradient-primary)',
+        'gradient-subtle': 'var(--gradient-subtle)',
+        'gradient-card': 'var(--gradient-card)',
+      },
+      boxShadow: {
+        'medical': 'var(--shadow-medical)',
+        'glow': 'var(--shadow-glow)',
+        'soft': 'var(--shadow-soft)',
+      },
+      transitionTimingFunction: {
+        'smooth': 'var(--transition-smooth)',
+        'bounce': 'var(--transition-bounce)',
       },
       borderRadius: {
         lg: "var(--radius)",
