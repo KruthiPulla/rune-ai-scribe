@@ -17,6 +17,7 @@ const Index = () => {
   const [patientData, setPatientData] = useState<PatientData>({
     name: '',
     age: '',
+    dateOfBirth: undefined,
     gender: '',
     address: '',
     mobile: '',
@@ -25,9 +26,9 @@ const Index = () => {
   const [filledFields, setFilledFields] = useState<Set<keyof PatientData>>(new Set());
   const { toast } = useToast();
 
-  const updatePatientData = useCallback((field: keyof PatientData, value: string) => {
+  const updatePatientData = useCallback((field: keyof PatientData, value: string | Date) => {
     setPatientData(prev => ({ ...prev, [field]: value }));
-    if (value.trim()) {
+    if ((typeof value === 'string' && value.trim()) || value instanceof Date) {
       setFilledFields(prev => new Set([...prev, field]));
       setLastProcessedField(field);
     } else {
@@ -53,19 +54,72 @@ const Index = () => {
   const processVoiceInput = useCallback((message: string) => {
     const lowerMessage = message.toLowerCase().trim();
     
-    // Improved name extraction with multiple patterns
+    // Enhanced name extraction with better patterns and validation
     const namePatterns = [
-      /(?:my name is|i'm|i am|call me|this is)\s+([a-zA-Z\s]+?)(?:\s+and|$|\.|\,)/i,
-      /(?:^|\s)([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*?)(?:\s+(?:and|i|my|age|\d))/,
+      /(?:my name is|i'm|i am|call me|this is|name)\s+([a-zA-Z][a-zA-Z\s]*?)(?:\s+(?:and|i am|i'm|my|age|\d|years|born|gender)|$|\.|\,)/i,
+      /(?:^|hello|hi)\s*,?\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*?)(?:\s+(?:and|here|speaking|i am|i'm|my|age|\d|years))/i,
+      /(?:^|\s)([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,2})(?:\s+(?:and|i|my|age|\d|years|born))/,
     ];
+    
+    // Clean common speech artifacts from name
+    const cleanName = (name: string): string => {
+      return name
+        .replace(/\b(hi|hello|room|rune)\b/gi, '') // Remove greeting words
+        .replace(/\s+/g, ' ') // Normalize spaces
+        .trim();
+    };
     
     for (const pattern of namePatterns) {
       const nameMatch = message.match(pattern);
       if (nameMatch && nameMatch[1]) {
-        const extractedName = nameMatch[1].trim();
-        if (extractedName.length > 1 && extractedName.length < 50) {
+        const extractedName = cleanName(nameMatch[1]);
+        // Validate name: should be 2-50 chars, contain letters, no numbers
+        if (extractedName.length >= 2 && 
+            extractedName.length <= 50 && 
+            /^[a-zA-Z\s]+$/.test(extractedName) &&
+            !patientData.name) {
           updatePatientData('name', extractedName);
           break;
+        }
+      }
+    }
+
+    // Enhanced date of birth extraction
+    const dobPatterns = [
+      /(?:born(?:\s+on)?|birth(?:\s+(?:date|is))?|date of birth)\s+(?:is\s+)?(\d{1,2}[-\/]\d{1,2}[-\/]\d{4})/i,
+      /(?:born(?:\s+on)?|birth(?:\s+(?:date|is))?)\s+(?:is\s+)?(\d{1,2}(?:st|nd|rd|th)?\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\w*\s+\d{4})/i,
+      /(\d{1,2}[-\/]\d{1,2}[-\/]\d{4})/,
+    ];
+    
+    for (const pattern of dobPatterns) {
+      const dobMatch = lowerMessage.match(pattern);
+      if (dobMatch && dobMatch[1] && !patientData.dateOfBirth) {
+        try {
+          // Parse the date string
+          let dateStr = dobMatch[1];
+          let parsedDate: Date | null = null;
+          
+          // Try different date formats
+          if (/\d{1,2}[-\/]\d{1,2}[-\/]\d{4}/.test(dateStr)) {
+            const parts = dateStr.split(/[-\/]/);
+            // Assume MM/DD/YYYY or DD/MM/YYYY - prefer DD/MM/YYYY for medical forms
+            parsedDate = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+          }
+          
+          if (parsedDate && !isNaN(parsedDate.getTime()) && 
+              parsedDate < new Date() && 
+              parsedDate > new Date('1900-01-01')) {
+            updatePatientData('dateOfBirth', parsedDate);
+            // Auto-calculate age
+            const today = new Date();
+            const age = today.getFullYear() - parsedDate.getFullYear();
+            const monthDiff = today.getMonth() - parsedDate.getMonth();
+            const calculatedAge = (monthDiff < 0 || (monthDiff === 0 && today.getDate() < parsedDate.getDate())) ? age - 1 : age;
+            updatePatientData('age', calculatedAge.toString());
+            break;
+          }
+        } catch (error) {
+          console.log('Date parsing error:', error);
         }
       }
     }
@@ -193,11 +247,11 @@ const Index = () => {
 
     toast({
       title: "Form saved successfully!",
-      description: `Saved ${filledFields.size}/6 completed fields.`,
+      description: `Saved ${filledFields.size}/7 completed fields.`,
     });
   };
 
-  const completionPercentage = (filledFields.size / 6) * 100;
+  const completionPercentage = (filledFields.size / 7) * 100;
 
   return (
     <div className="min-h-screen bg-gradient-subtle">
