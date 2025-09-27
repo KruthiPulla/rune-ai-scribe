@@ -137,6 +137,9 @@ export const VoiceInterface: React.FC<VoiceInterfaceProps> = ({
             <p className="text-sm text-accent-foreground text-left">
               {transcript}
             </p>
+            <div className="mt-2 text-xs text-medical-primary">
+              ✨ AI is processing this information...
+            </div>
           </div>
         )}
 

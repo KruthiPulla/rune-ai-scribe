@@ -34,59 +34,154 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onUpdateForm, pati
   const processUserMessage = async (message: string) => {
     setIsProcessing(true);
     
-    // Simulate AI processing and form filling
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // Simulate AI processing delay
+    await new Promise(resolve => setTimeout(resolve, 800));
     
-    // Simple pattern matching for demo (in real app, this would be AI-powered)
+    // Enhanced AI processing with better pattern matching
     const lowerMessage = message.toLowerCase();
+    let extractedInfo = [];
     
-    // Extract name
-    const nameMatch = lowerMessage.match(/(?:my name is|i'm|i am|call me)\s+([a-zA-Z\s]+)/);
-    if (nameMatch) {
-      onUpdateForm('name', nameMatch[1].trim());
+    // Enhanced name extraction
+    const namePatterns = [
+      /(?:my name is|i'm|i am|call me|this is)\s+([a-zA-Z\s]+?)(?:\s+(?:and|i|my|age|\d)|$|\.|\,)/i,
+      /(?:^|\s)([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*?)(?:\s+(?:and|i|my|age|\d))/,
+    ];
+    
+    for (const pattern of namePatterns) {
+      const nameMatch = message.match(pattern);
+      if (nameMatch && nameMatch[1]) {
+        const extractedName = nameMatch[1].trim();
+        if (extractedName.length > 1 && extractedName.length < 50 && !patientData.name) {
+          onUpdateForm('name', extractedName);
+          extractedInfo.push(`name: ${extractedName}`);
+          break;
+        }
+      }
     }
     
-    // Extract age
-    const ageMatch = lowerMessage.match(/(?:i'm|i am|age)\s+(\d+)(?:\s+years?\s+old)?/);
-    if (ageMatch) {
-      onUpdateForm('age', ageMatch[1]);
+    // Enhanced age extraction
+    const agePatterns = [
+      /(?:i'm|i am|age(?:\s+is)?)\s+(\d+)(?:\s+years?\s+old)?/i,
+      /(\d+)\s+years?\s+old/i,
+      /age\s*:?\s*(\d+)/i,
+    ];
+    
+    for (const pattern of agePatterns) {
+      const ageMatch = lowerMessage.match(pattern);
+      if (ageMatch && ageMatch[1]) {
+        const age = parseInt(ageMatch[1]);
+        if (age > 0 && age < 150 && !patientData.age) {
+          onUpdateForm('age', ageMatch[1]);
+          extractedInfo.push(`age: ${ageMatch[1]} years`);
+          break;
+        }
+      }
     }
     
-    // Extract gender
-    if (lowerMessage.includes('male') && !lowerMessage.includes('female')) {
-      onUpdateForm('gender', 'male');
-    } else if (lowerMessage.includes('female')) {
-      onUpdateForm('gender', 'female');
+    // Enhanced gender extraction
+    const genderPatterns = [
+      /(?:gender(?:\s+is)?|i am|i'm)\s+(male|female|man|woman|boy|girl)/i,
+      /(?:^|\s)(male|female|man|woman|boy|girl)(?:\s|$)/i,
+    ];
+    
+    for (const pattern of genderPatterns) {
+      const genderMatch = lowerMessage.match(pattern);
+      if (genderMatch && genderMatch[1] && !patientData.gender) {
+        let gender = genderMatch[1].toLowerCase();
+        if (gender === 'man' || gender === 'boy') gender = 'male';
+        if (gender === 'woman' || gender === 'girl') gender = 'female';
+        onUpdateForm('gender', gender);
+        extractedInfo.push(`gender: ${gender}`);
+        break;
+      }
     }
     
-    // Extract phone
-    const phoneMatch = lowerMessage.match(/(?:phone|number|mobile|call)\s*(?:is|:)?\s*([0-9\-\(\)\s+]+)/);
-    if (phoneMatch) {
-      onUpdateForm('mobile', phoneMatch[1].trim());
+    // Enhanced phone extraction
+    const phonePatterns = [
+      /(?:mobile|phone|number|contact)(?:\s+(?:is|number))?\s*:?\s*([0-9\-\(\)\s+]{8,15})/i,
+      /(\d{3,4}[\s\-]?\d{3,4}[\s\-]?\d{3,4})/,
+    ];
+    
+    for (const pattern of phonePatterns) {
+      const phoneMatch = message.match(pattern);
+      if (phoneMatch && phoneMatch[1]) {
+        const phone = phoneMatch[1].trim();
+        const cleanPhone = phone.replace(/\D/g, '');
+        if (cleanPhone.length >= 8 && cleanPhone.length <= 15 && !patientData.mobile) {
+          onUpdateForm('mobile', phone);
+          extractedInfo.push(`mobile: ${phone}`);
+          break;
+        }
+      }
     }
     
-    // Extract symptoms
-    const symptomKeywords = ['pain', 'hurt', 'ache', 'fever', 'cough', 'headache', 'nausea', 'dizzy', 'tired', 'sick'];
-    if (symptomKeywords.some(keyword => lowerMessage.includes(keyword))) {
-      const currentSymptoms = patientData.symptoms;
-      const newSymptoms = currentSymptoms ? `${currentSymptoms} ${message}` : message;
-      onUpdateForm('symptoms', newSymptoms);
+    // Enhanced address extraction
+    const addressPatterns = [
+      /(?:live(?:\s+in)?|address(?:\s+is)?|from)\s+([a-zA-Z\s,]+?)(?:\s+(?:my|and|i|symptoms|mobile|phone)|$)/i,
+      /(?:gachibowli|hyderabad|bangalore|mumbai|delhi|chennai|kolkata|pune)/i,
+    ];
+    
+    for (const pattern of addressPatterns) {
+      const addressMatch = message.match(pattern);
+      if (addressMatch && addressMatch[1] && !patientData.address) {
+        const address = addressMatch[1].trim();
+        if (address.length > 2) {
+          onUpdateForm('address', address);
+          extractedInfo.push(`address: ${address}`);
+          break;
+        }
+      }
     }
     
-    // Generate AI response
-    let aiResponse = "Thank you for that information. I've updated your form with the details you provided. ";
+    // Enhanced symptoms extraction
+    const symptomKeywords = [
+      'pain', 'hurt', 'ache', 'fever', 'cough', 'headache', 'nausea', 'dizzy', 'tired', 'sick',
+      'cold', 'flu', 'sore throat', 'stomach', 'breathing', 'fatigue', 'weakness', 'vomiting'
+    ];
     
+    const symptomsPattern = /(?:symptoms?(?:\s+are)?|suffering from|having|feel|feeling)\s+(.+?)(?:\s+(?:and|my|i|mobile|phone|address)|$)/i;
+    const symptomsMatch = message.match(symptomsPattern);
+    
+    if (symptomsMatch || symptomKeywords.some(keyword => lowerMessage.includes(keyword))) {
+      let newSymptomText = '';
+      
+      if (symptomsMatch) {
+        newSymptomText = symptomsMatch[1].trim();
+      } else if (symptomKeywords.some(keyword => lowerMessage.includes(keyword))) {
+        newSymptomText = message.trim();
+      }
+      
+      if (newSymptomText) {
+        const currentSymptoms = patientData.symptoms;
+        const updatedSymptoms = currentSymptoms 
+          ? `${currentSymptoms}. ${newSymptomText}` 
+          : newSymptomText;
+        onUpdateForm('symptoms', updatedSymptoms);
+        extractedInfo.push(`symptoms: ${newSymptomText}`);
+      }
+    }
+    
+    // Generate AI response based on extracted information
+    let aiResponse = "";
+    
+    if (extractedInfo.length > 0) {
+      aiResponse = `Great! I've extracted and updated the following information: ${extractedInfo.join(', ')}. `;
+    } else {
+      aiResponse = "I heard what you said, but couldn't extract specific form information from it. ";
+    }
+    
+    // Check for missing fields
     const missingFields = [];
-    if (!patientData.name && !nameMatch) missingFields.push('your name');
-    if (!patientData.age && !ageMatch) missingFields.push('your age');
-    if (!patientData.gender && !lowerMessage.includes('male') && !lowerMessage.includes('female')) missingFields.push('your gender');
-    if (!patientData.mobile && !phoneMatch) missingFields.push('your mobile number');
+    if (!patientData.name) missingFields.push('your name');
+    if (!patientData.age) missingFields.push('your age');
+    if (!patientData.gender) missingFields.push('your gender');
+    if (!patientData.mobile) missingFields.push('your mobile number');
     if (!patientData.address) missingFields.push('your address');
     
     if (missingFields.length > 0) {
-      aiResponse += `Could you also provide ${missingFields.join(', ')}?`;
+      aiResponse += `I still need ${missingFields.join(', ')}. Could you please provide this information?`;
     } else {
-      aiResponse += "Your form appears to be complete! Is there anything else you'd like to add or modify?";
+      aiResponse += "Perfect! Your form is now complete. Is there anything else you'd like to add or modify?";
     }
     
     const aiMessage: Message = {

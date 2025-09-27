@@ -2,6 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { VoiceInterface } from '@/components/VoiceInterface';
 import { PatientForm, PatientData } from '@/components/PatientForm';
 import { ChatInterface } from '@/components/ChatInterface';
+import { ProcessingStatus } from '@/components/ProcessingStatus';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -11,6 +12,8 @@ import heroImage from '@/assets/hero-medical.jpg';
 
 const Index = () => {
   const [isListening, setIsListening] = useState(false);
+  const [isProcessingVoice, setIsProcessingVoice] = useState(false);
+  const [lastProcessedField, setLastProcessedField] = useState<keyof PatientData>();
   const [patientData, setPatientData] = useState<PatientData>({
     name: '',
     age: '',
@@ -26,6 +29,7 @@ const Index = () => {
     setPatientData(prev => ({ ...prev, [field]: value }));
     if (value.trim()) {
       setFilledFields(prev => new Set([...prev, field]));
+      setLastProcessedField(field);
     } else {
       setFilledFields(prev => {
         const newSet = new Set(prev);
@@ -36,10 +40,146 @@ const Index = () => {
   }, []);
 
   const handleVoiceTranscript = useCallback((transcript: string) => {
-    // This would typically be processed by AI to extract form data
-    // For now, we'll add it to symptoms as a demo
     console.log('Voice transcript:', transcript);
+    setIsProcessingVoice(true);
+    
+    // Process the transcript with improved AI logic
+    processVoiceInput(transcript);
+    
+    // Stop processing after a short delay
+    setTimeout(() => setIsProcessingVoice(false), 1500);
   }, []);
+
+  const processVoiceInput = useCallback((message: string) => {
+    const lowerMessage = message.toLowerCase().trim();
+    
+    // Improved name extraction with multiple patterns
+    const namePatterns = [
+      /(?:my name is|i'm|i am|call me|this is)\s+([a-zA-Z\s]+?)(?:\s+and|$|\.|\,)/i,
+      /(?:^|\s)([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*?)(?:\s+(?:and|i|my|age|\d))/,
+    ];
+    
+    for (const pattern of namePatterns) {
+      const nameMatch = message.match(pattern);
+      if (nameMatch && nameMatch[1]) {
+        const extractedName = nameMatch[1].trim();
+        if (extractedName.length > 1 && extractedName.length < 50) {
+          updatePatientData('name', extractedName);
+          break;
+        }
+      }
+    }
+    
+    // Improved age extraction
+    const agePatterns = [
+      /(?:i'm|i am|age(?:\s+is)?)\s+(\d+)(?:\s+years?\s+old)?/i,
+      /(\d+)\s+years?\s+old/i,
+      /age\s*:?\s*(\d+)/i,
+    ];
+    
+    for (const pattern of agePatterns) {
+      const ageMatch = lowerMessage.match(pattern);
+      if (ageMatch && ageMatch[1]) {
+        const age = parseInt(ageMatch[1]);
+        if (age > 0 && age < 150) {
+          updatePatientData('age', ageMatch[1]);
+          break;
+        }
+      }
+    }
+    
+    // Improved gender extraction
+    const genderPatterns = [
+      /(?:gender(?:\s+is)?|i am|i'm)\s+(male|female|man|woman|boy|girl)/i,
+      /(?:^|\s)(male|female|man|woman|boy|girl)(?:\s|$)/i,
+    ];
+    
+    for (const pattern of genderPatterns) {
+      const genderMatch = lowerMessage.match(pattern);
+      if (genderMatch && genderMatch[1]) {
+        let gender = genderMatch[1].toLowerCase();
+        if (gender === 'man' || gender === 'boy') gender = 'male';
+        if (gender === 'woman' || gender === 'girl') gender = 'female';
+        updatePatientData('gender', gender);
+        break;
+      }
+    }
+    
+    // Improved phone number extraction
+    const phonePatterns = [
+      /(?:mobile|phone|number|contact)(?:\s+(?:is|number))?\s*:?\s*([0-9\-\(\)\s+]{8,15})/i,
+      /(\d{3,4}[\s\-]?\d{3,4}[\s\-]?\d{3,4})/,
+      /(\d{10,})/,
+    ];
+    
+    for (const pattern of phonePatterns) {
+      const phoneMatch = message.match(pattern);
+      if (phoneMatch && phoneMatch[1]) {
+        const cleanPhone = phoneMatch[1].replace(/\D/g, '');
+        if (cleanPhone.length >= 8 && cleanPhone.length <= 15) {
+          updatePatientData('mobile', phoneMatch[1].trim());
+          break;
+        }
+      }
+    }
+    
+    // Improved address extraction
+    const addressPatterns = [
+      /(?:live(?:\s+in)?|address(?:\s+is)?|from)\s+([a-zA-Z\s,]+?)(?:\s+(?:my|and|i|symptoms|mobile|phone)|$)/i,
+      /(?:gachibowli|hyderabad|bangalore|mumbai|delhi|chennai|kolkata|pune|ahmedabad|jaipur|lucknow|kanpur|nagpur|visakhapatnam|indore|bhopal|coimbatore|patna|vadodara|ludhiana|agra|madurai|nashik|faridabad|meerut|rajkot|kalyan|vasai|varanasi|srinagar|aurangabad|dhanbad|amritsar|navi mumbai|allahabad|ranchi|howrah|jabalpur|gwalior|vijayawada|jodhpur|raipur|kota|guwahati|chandigarh|solapur|hubballi|tiruchirappalli|bareilly|moradabad|mysore|tiruppur|gurgaon|aligarh|jalandhar|bhubaneswar|salem|warangal|guntur|bhilai|kochi|amravati|bikaner|noida|jamshedpur|bhilwara|cuttack|firozabad|kurnool|rajkot|dehradun|durgapur|asansol|siliguri|rourkela)/i,
+    ];
+    
+    for (const pattern of addressPatterns) {
+      const addressMatch = message.match(pattern);
+      if (addressMatch && addressMatch[1]) {
+        const address = addressMatch[1].trim();
+        if (address.length > 2) {
+          updatePatientData('address', address);
+          break;
+        }
+      }
+    }
+    
+    // Improved symptoms extraction
+    const symptomKeywords = [
+      'pain', 'hurt', 'ache', 'fever', 'cough', 'headache', 'nausea', 'dizzy', 'tired', 'sick',
+      'cold', 'flu', 'sore throat', 'stomach', 'back pain', 'chest pain', 'breathing',
+      'shortness of breath', 'fatigue', 'weakness', 'vomiting', 'diarrhea', 'constipation',
+      'rash', 'swelling', 'joint pain', 'muscle pain', 'burning', 'itching', 'discharge',
+      'bleeding', 'bruising', 'numbness', 'tingling', 'vision', 'hearing', 'memory',
+      'anxiety', 'depression', 'sleep', 'appetite', 'weight loss', 'weight gain'
+    ];
+    
+    const symptomsPattern = /(?:symptoms?(?:\s+are)?|suffering from|having|feel|feeling)\s+(.+?)(?:\s+(?:and|my|i|mobile|phone|address)|$)/i;
+    const symptomsMatch = message.match(symptomsPattern);
+    
+    if (symptomsMatch || symptomKeywords.some(keyword => lowerMessage.includes(keyword))) {
+      const currentSymptoms = patientData.symptoms;
+      let newSymptomText = '';
+      
+      if (symptomsMatch) {
+        newSymptomText = symptomsMatch[1].trim();
+      } else {
+        // If no direct symptom phrase, but contains symptom keywords, add the whole message
+        if (symptomKeywords.some(keyword => lowerMessage.includes(keyword))) {
+          newSymptomText = message.trim();
+        }
+      }
+      
+      if (newSymptomText) {
+        const updatedSymptoms = currentSymptoms 
+          ? `${currentSymptoms}. ${newSymptomText}` 
+          : newSymptomText;
+        updatePatientData('symptoms', updatedSymptoms);
+      }
+    }
+    
+    // Show success toast when information is extracted
+    toast({
+      title: "Information processed",
+      description: "I've updated your form with the information you provided.",
+    });
+  }, [patientData, updatePatientData, toast]);
 
   const handleSaveForm = () => {
     if (filledFields.size === 0) {
@@ -150,6 +290,11 @@ const Index = () => {
               onTranscript={handleVoiceTranscript}
               isListening={isListening}
               onToggleListening={() => setIsListening(!isListening)}
+            />
+            
+            <ProcessingStatus
+              lastProcessedField={lastProcessedField}
+              isProcessing={isProcessingVoice}
             />
             
             <PatientForm
