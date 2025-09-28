@@ -35,7 +35,6 @@ export const ProcessingStatus: React.FC<ProcessingStatusProps> = ({
     const names = {
       name: 'Name',
       age: 'Age',
-      dateOfBirth: 'Date of Birth',
       gender: 'Gender',
       address: 'Address',
       mobile: 'Mobile Number',

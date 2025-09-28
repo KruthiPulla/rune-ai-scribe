@@ -72,36 +72,6 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onUpdateForm, pati
       }
     }
 
-    // Enhanced date of birth and age extraction
-    const dobPatterns = [
-      /(?:born(?:\s+on)?|birth(?:\s+(?:date|is))?|date of birth)\s+(?:is\s+)?(\d{1,2}[-\/]\d{1,2}[-\/]\d{4})/i,
-    ];
-    
-    for (const pattern of dobPatterns) {
-      const dobMatch = lowerMessage.match(pattern);
-      if (dobMatch && dobMatch[1] && !patientData.dateOfBirth) {
-        try {
-          const parts = dobMatch[1].split(/[-\/]/);
-          const parsedDate = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
-          
-          if (!isNaN(parsedDate.getTime()) && 
-              parsedDate < new Date() && 
-              parsedDate > new Date('1900-01-01')) {
-            onUpdateForm('dateOfBirth', parsedDate);
-            // Auto-calculate age
-            const today = new Date();
-            const age = today.getFullYear() - parsedDate.getFullYear();
-            const monthDiff = today.getMonth() - parsedDate.getMonth();
-            const calculatedAge = (monthDiff < 0 || (monthDiff === 0 && today.getDate() < parsedDate.getDate())) ? age - 1 : age;
-            onUpdateForm('age', calculatedAge.toString());
-            extractedInfo.push(`date of birth and age: ${calculatedAge}`);
-            break;
-          }
-        } catch (error) {
-          console.log('Date parsing error:', error);
-        }
-      }
-    }
     
     // Enhanced age extraction
     const agePatterns = [
@@ -217,7 +187,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onUpdateForm, pati
     // Check for missing fields
     const missingFields = [];
     if (!patientData.name) missingFields.push('your name');
-    if (!patientData.age && !patientData.dateOfBirth) missingFields.push('your age or date of birth');
+    if (!patientData.age) missingFields.push('your age');
     if (!patientData.gender) missingFields.push('your gender');
     if (!patientData.mobile) missingFields.push('your mobile number');
     if (!patientData.address) missingFields.push('your address');

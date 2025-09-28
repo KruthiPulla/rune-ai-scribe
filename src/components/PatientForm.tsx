@@ -15,7 +15,6 @@ import { cn } from '@/lib/utils';
 export interface PatientData {
   name: string;
   age: string;
-  dateOfBirth?: Date;
   gender: string;
   address: string;
   mobile: string;
@@ -29,24 +28,6 @@ interface PatientFormProps {
 }
 
 export const PatientForm: React.FC<PatientFormProps> = ({ data, onChange, filledFields }) => {
-  const calculateAge = (birthDate: Date): number => {
-    const today = new Date();
-    const age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-    
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-      return age - 1;
-    }
-    return age;
-  };
-
-  const handleDateOfBirthChange = (date: Date | undefined) => {
-    if (date) {
-      onChange('dateOfBirth', date);
-      const calculatedAge = calculateAge(date);
-      onChange('age', calculatedAge.toString());
-    }
-  };
 
   return (
     <Card className="bg-gradient-card shadow-soft">
@@ -81,51 +62,9 @@ export const PatientForm: React.FC<PatientFormProps> = ({ data, onChange, filled
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="dob" className="flex items-center gap-2">
-              <CalendarIcon className="w-4 h-4" />
-              Date of Birth
-              {filledFields.has('dateOfBirth') && (
-                <Badge variant="secondary" className="ml-auto bg-medical-primary/10 text-medical-primary">
-                  ✓ Filled
-                </Badge>
-              )}
-            </Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "w-full justify-start text-left font-normal",
-                    !data.dateOfBirth && "text-muted-foreground",
-                    filledFields.has('dateOfBirth') ? 'border-medical-primary/50 bg-medical-primary/5' : ''
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {data.dateOfBirth ? format(data.dateOfBirth, "PPP") : <span>Pick date of birth</span>}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={data.dateOfBirth}
-                  onSelect={handleDateOfBirthChange}
-                  disabled={(date) =>
-                    date > new Date() || date < new Date("1900-01-01")
-                  }
-                  initialFocus
-                  className={cn("p-3 pointer-events-auto")}
-                />
-              </PopoverContent>
-            </Popover>
-            <div className="text-xs text-muted-foreground">
-              💡 Voice tip: Say "I was born on [date]" or "My date of birth is [date]"
-            </div>
-          </div>
-
-          <div className="space-y-2">
             <Label htmlFor="age" className="flex items-center gap-2">
               <CalendarIcon className="w-4 h-4" />
-              Age {data.dateOfBirth && <span className="text-xs text-medical-primary">(Auto-calculated)</span>}
+              Age
               {filledFields.has('age') && (
                 <Badge variant="secondary" className="ml-auto bg-medical-primary/10 text-medical-primary">
                   ✓ Filled
@@ -136,10 +75,9 @@ export const PatientForm: React.FC<PatientFormProps> = ({ data, onChange, filled
               id="age"
               value={data.age}
               onChange={(e) => onChange('age', e.target.value)}
-              placeholder="Enter age or select date of birth above"
+              placeholder="Enter your age"
               type="number"
               className={filledFields.has('age') ? 'border-medical-primary/50 bg-medical-primary/5' : ''}
-              disabled={!!data.dateOfBirth}
             />
             <div className="text-xs text-muted-foreground">
               💡 Voice tip: Say "I'm [age] years old" or "I am [age]"
@@ -234,13 +172,13 @@ export const PatientForm: React.FC<PatientFormProps> = ({ data, onChange, filled
           <div className="flex justify-between items-center text-sm">
             <span className="text-muted-foreground">Form Completion:</span>
             <span className="font-medium text-medical-primary">
-              {filledFields.size}/7 fields completed
+              {filledFields.size}/6 fields completed
             </span>
           </div>
           <div className="w-full bg-secondary rounded-full h-2 mt-2">
             <div
               className="bg-gradient-primary h-2 rounded-full transition-all duration-500"
-              style={{ width: `${(filledFields.size / 7) * 100}%` }}
+              style={{ width: `${(filledFields.size / 6) * 100}%` }}
             />
           </div>
         </div>
